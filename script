@@ -1,0 +1,77 @@
+# Import packages
+from nba_api.stats.endpoints import shotchartdetail
+import pandas as pd
+import json
+import requests
+import datetime
+
+# Create first JSON request
+shot_json1 = shotchartdetail.ShotChartDetail(
+            team_id = 0, # can input the id# but 0, will return all
+            player_id = 0, # can input the id# but 0, will return all
+            context_measure_simple = 'FGA', # also 'PTS' has ONLY makes
+            season_nullable = '2022-23',
+            season_type_all_star = 'Regular Season')    # can incldue (Pre Season, Playoffs, All Star)
+            
+# Load data into a Python dictionary
+shot_data1 = json.loads(shot_json1.get_json())
+
+# Get the relevant data from our dictionary
+relevant_data1 = shot_data1['resultSets'][0]
+
+# Get the headers and row data
+headers = relevant_data1['headers']
+rows = relevant_data1['rowSet']
+
+# Create pandas DataFrame
+nba_shot_data1 = pd.DataFrame(rows)
+nba_shot_data1.columns = headers
+
+
+# Create a SECOND JSON request 
+# this is for last years data
+shot_json2 = shotchartdetail.ShotChartDetail(
+            team_id = 0, # can input the id# but 0, will return all
+            player_id = 0, # can input the id# but 0, will return all
+            context_measure_simple = 'FGA', # also 'PTS' has ONLY makes
+            season_nullable = '2021-22',
+            season_type_all_star = 'Regular Season')    # can incldue (Pre Season, Playoffs, All Star)
+
+# Load data into a Python dictionary
+shot_data2 = json.loads(shot_json2.get_json())
+
+# Get the relevant data from our dictionary
+relevant_data2 = shot_data2['resultSets'][0]
+
+# Get the headers and row data
+headers = relevant_data2['headers']
+rows = relevant_data2['rowSet']
+
+# Create pandas DataFrame
+nba_shot_data2 = pd.DataFrame(rows)
+nba_shot_data2.columns = headers
+
+
+# combine both dataframes from each year 
+nba_shot_data = pd.concat([nba_shot_data1, nba_shot_data2])
+
+#update game_date type 
+nba_shot_data['GAME_DATE'] = nba_shot_data['GAME_DATE'].apply(lambda x: datetime.datetime.strptime(x, '%Y%m%d').strftime('%m-%d-%Y'))
+
+# update SHOT_TYPE column 
+# Replace "2PT Field Goal" with "2PT FG"
+nba_shot_data['SHOT_TYPE'] = nba_shot_data['SHOT_TYPE'].replace('2PT Field Goal', '2PT FG')
+nba_shot_data['SHOT_TYPE'] = nba_shot_data['SHOT_TYPE'].replace('3PT Field Goal', '3PT FG')
+
+# Update Period column, by defining a function to map Period to Quarter
+# define function to map period to quarter
+def map_period_to_qtr(period):
+    quarter_map = {1: 'Q1', 2: 'Q2', 3: 'Q3', 4: 'Q4', 5: 'OT1', 6: 'OT2', 7: 'OT3', 8: 'OT4'}
+    return quarter_map.get(period)
+
+# Add column for quarter
+nba_shot_data['QUARTER'] = nba_shot_data['PERIOD'].apply(map_period_to_qtr)
+
+# EXPORT TO CSV
+# create your own path and file name
+nba_shot_data.to_csv(r'C:\Users\x\Documents\NBA Live Shot Chart.csv', index=False)
