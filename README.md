@@ -10,6 +10,3 @@ also please read my Medium Post where i go in detail on script and how to turn t
 Please provide any feedback you may have. 
 
 
-
-
-
